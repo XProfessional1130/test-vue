@@ -1,31 +1,31 @@
 <script setup lang="ts">
 import { defineProps, ref, watch, onMounted, onUnmounted } from "vue";
-import { defineAsyncComponent } from "vue";
+import getIconForType from "@/utils/getIconForType";
+import Container from "./Container.vue";
+import TestContentConfirm from "./TestContentConfirm.vue";
 
 const props = defineProps<{
-  items: { text: string; visible: boolean; type: number }[][];
+  items: { text: string; visible: boolean; type: number; amount: number }[][];
 }>();
 
-const getIconForType = (type: number) => {
-  switch (type) {
-    case 0:
-      return defineAsyncComponent(
-        () => import("../components/icons/IconGreen.vue")
-      );
-    case 1:
-      return defineAsyncComponent(
-        () => import("../components/icons/IconPurple.vue")
-      );
-    case 2:
-      return defineAsyncComponent(
-        () => import("../components/icons/IconGallery.vue")
-      );
-    default:
-      return null;
-  }
-};
+let selectedItemData = ref<{
+  text: string;
+  visible: boolean;
+  type: number;
+  amount: number
+} | null>({ text: "", type: 0, visible: false, amount: 0 });
+
+const setItemValue = (amount: number) => {
+  props.items[selectedItem.value!.colIndex][selectedItem.value!.itemIndex].amount = amount;
+}
+
+const visible = ref(false);
+const setVisible = () => {
+  visible.value = !visible;
+}
 
 const itemsTableRef = ref<HTMLElement | null>(null);
+let isDraggable = ref(false);
 let selectedItem = ref<{ colIndex: number; itemIndex: number } | null>(null);
 let mouseOldPosition = { x: 0, y: 0 };
 let mouseOrigialPosition = { x: 0, y: 0 };
@@ -43,6 +43,7 @@ let itemPositions = ref(
 );
 
 const mouseDown = (e: MouseEvent, colIndex: number, itemIndex: number) => {
+  isDraggable.value = true;
   mouseOldPosition = { x: e.clientX, y: e.clientY };
   mouseOrigialPosition = {
     x: e.clientX,
@@ -50,10 +51,11 @@ const mouseDown = (e: MouseEvent, colIndex: number, itemIndex: number) => {
   };
 
   selectedItem.value = { colIndex, itemIndex };
+  selectedItemData.value = props.items[colIndex][itemIndex];
 };
 
 const mouseMovement = (e: MouseEvent) => {
-  if (selectedItem.value) {
+  if (selectedItem.value && isDraggable.value) {
     const { colIndex, itemIndex } = selectedItem.value;
     const position = itemPositions.value[colIndex][itemIndex];
 
@@ -74,20 +76,6 @@ const mouseRelease = () => {
     const parentWidth = parentRect?.width || 525;
     const parentHeight = parentRect?.height || 500;
 
-    // Calculate new column index based on the offset and parent height
-    console.log(mouseOrigialPosition, parentRect);
-    console.log(
-      Math.floor(
-        ((position.offsetY + mouseOrigialPosition.y - (parentRect?.y || 0)) /
-          parentHeight) *
-          5
-      ),
-      Math.floor(
-        ((position.offsetX + mouseOrigialPosition.x - (parentRect?.x || 0)) /
-          parentWidth) *
-          5
-      )
-    );
     const newColIndex: number = Math.floor(
       ((position.offsetY + mouseOrigialPosition.y - (parentRect?.y || 0)) /
         parentHeight) *
@@ -108,17 +96,7 @@ const mouseRelease = () => {
       newItemIndex < props.items[newColIndex].length
     ) {
       // Swap positions
-      const temp = { ...itemPositions.value[colIndex][itemIndex] };
-      itemPositions.value[colIndex][itemIndex] = {
-        ...itemPositions.value[newColIndex][newItemIndex],
-        offsetX: 0,
-        offsetY: 0,
-      };
-      itemPositions.value[newColIndex][newItemIndex] = {
-        ...temp,
-        offsetX: 0,
-        offsetY: 0,
-      };
+
       const buffer = { ...props.items[colIndex][itemIndex] };
 
       props.items[colIndex][itemIndex] = {
@@ -131,13 +109,12 @@ const mouseRelease = () => {
       // Reset the position if it's out of bounds
       position.offsetX = 0;
       position.offsetY = 0;
-    }
-
-    // Reset selected item after a short delay
-    setTimeout(() => {
-      selectedItem.value = null;
-    }, 50);
+    }    
   }
+
+  setTimeout(()=>{
+    isDraggable.value = false;
+  }, 50)
 };
 
 watch(
@@ -176,6 +153,11 @@ onUnmounted(() => {
           class="item"
           v-for="(item, itemIndex) in column"
           :key="item.text"
+          @mouseup="() => {
+            if (item.visible) {
+              visible = true;
+            }
+          }"
           @mousedown="(e) => mouseDown(e, colIndex, itemIndex)"
           :class="{
             selected:
@@ -190,9 +172,13 @@ onUnmounted(() => {
         >
           <span v-if="item.visible">
             <component :is="getIconForType(item.type)" />
+            <span class="text-amount">{{ item.amount }}</span>
           </span>
         </div>
       </div>
+      <Container class="item-setting" v-show="visible">
+        <TestContentConfirm :item="selectedItemData!" :set-visible="setVisible" :set-amount="setItemValue" />
+      </Container>
     </div>
   </div>
 </template>
@@ -227,6 +213,14 @@ onUnmounted(() => {
 }
 
 .selected {
-  z-index: 10;
+  z-index: 1;
+}
+
+.item-setting {
+  position: absolute;
+  width: 30%;
+  height: 100%;
+  top: 0%;
+  right: 0%;
 }
 </style>

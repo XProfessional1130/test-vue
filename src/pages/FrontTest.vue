@@ -1,34 +1,22 @@
 <script setup lang="ts">
-import Container from "../components/Container.vue";
-import TestSide from "../components/TestSide.vue";
-import TestContent from "../components/TestContent.vue";
-import { ref, watch, onUnmounted, onMounted } from 'vue';
-
-const sideItems = ref([
-  { text: "Item 1" },
-  { text: "Item 2" },
-  { text: "Item 3" },
-  { text: "Item 4" },
-  { text: "Item 5" },
-]);
-
-const status = ref('true');
+import { ref, watch, onUnmounted, onMounted } from "vue";
+import TestSide from "@/components/TestSide.vue";
+import Container from "@/components/Container.vue";
+import TestContent from "@/components/TestContent.vue";
 
 const rand = () => Math.random(); // Random number between 0 and 1
 
 let contentItems = ref(
   JSON.parse(localStorage.getItem("contentItems") || "null") ||
-  Array.from({ length: 5 }, (_, i) =>
-    Array.from({ length: 5 }, (_, j) => ({
-      text: `Item ${i + 1}, ${j + 1}`,
-      type: Math.floor(rand() * 3), // Random number between 0 and 2
-      visible: rand() > 0.7, // 30% chance to be visible
-    }))
-  )
+    Array.from({ length: 5 }, (_, i) =>
+      Array.from({ length: 5 }, (_, j) => ({
+        text: `Item ${i + 1}, ${j + 1}`,
+        type: Math.floor(rand() * 3), // Random number between 0 and 2
+        visible: rand() > 0.7, // 30% chance to be visible
+        amount: Math.floor(rand() * 10), // Random number between 0 and 9
+      }))
+    )
 );
-
-console.log(contentItems.value);
-
 // Save the contentItems array to localStorage whenever it changes
 const saveContentItems = () => {
   localStorage.setItem("contentItems", JSON.stringify(contentItems.value));
@@ -47,7 +35,7 @@ onUnmounted(() => {
   <div class="front-test">
     <div class="front-test-body" style="height: 90%">
       <Container class="test-body-side">
-        <TestSide :items="sideItems" :status="status" />
+        <TestSide />
       </Container>
       <Container class="test-body-content">
         <TestContent :items="contentItems" />
